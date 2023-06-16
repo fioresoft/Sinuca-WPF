@@ -5,15 +5,21 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BouncingBalls02"
         mc:Ignorable="d"
-        Title="SINUCA by fioresoft.net" Height="512" Width="770" x:Name="myWindow"
+        Title="SINUCA by fioresoft.net" Height="532" Width="770" x:Name="myWindow"
         ResizeMode="CanMinimize" Icon="/23.gif" Closing="myWindow_Closing" Loaded="myWindow_Loaded">
-    <DockPanel LastChildFill="True" Focusable="False">
+    <DockPanel LastChildFill="True" Focusable="False" Margin="0,0,-19,78">
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
                 <MenuItem Header="_Options" x:Name="menuOptions" Click="menuOptions_Click" />
+                <MenuItem Header="Game type">
+                    <MenuItem Header="Sinuca" IsCheckable="True" x:Name="menuSinuca"
+                              Click="menuSinuca_Click"/>
+                    <MenuItem Header="Random" IsCheckable="True" x:Name="menuRandom"
+                              Click="menuRandom_Click"/>
+                </MenuItem>
                 <MenuItem Header="E_xit" x:Name="menuExit" Click="menuExit_Click" />
             </MenuItem>
-            <MenuItem  Header="_About" >
+            <MenuItem  Header="_Help" >
                 <MenuItem Header="_Help" x:Name="menuHelp" Click="menuHelp_Click" />
                 <MenuItem Header="_About" x:Name="menuAbout" Click="menuAbout_Click" />
             </MenuItem>
@@ -23,16 +29,38 @@
             <Button x:Name="rot5" Content="&lt;---" Height="41" Width="62" Click="rot5_Click"  Focusable="False"/>
             <Button x:Name="RotMinus1" Height="41" Width="62" Content="&gt;"  Click="RotMinus1_Click" Focusable="False" />
             <Button x:Name="rot1" Content="&lt;" Height="41" Width="62" Click="rot1_Click" Focusable="False"/>
-            <Button x:Name="ball8" Content="8" Height="41" Width="62" Click="ball8_Click"  
-                    Focusable="False" IsEnabled="False"/>
+            <Button x:Name="ball8" Height="41" Width="62" Click="ball8_Click"  
+                    Focusable="False" IsEnabled="True" 
+                    Content="8">
+            </Button>
             <Separator/>
             <ProgressBar x:Name="myProgress"  Orientation="Horizontal" Width="240" Height="30" Minimum="0"
                          Maximum="1000" Value="0" />
             <Label x:Name="myLabel" Focusable="False" Width="40" Height="30"    />
         </ToolBar>
+        <ToolBar DockPanel.Dock="Top" Focusable="False" x:Name="myToolBar2">
+            <TextBlock x:Name="tbStatus" Width="200" Height="30" Focusable="False"/>
+            <TextBlock x:Name="tbPlayer1" Width="30" Height="30" Focusable="False"
+                       Background="Black" Foreground="White" />
+            <TextBlock x:Name="tbPlayer2" Width="30" Height="30" Focusable="False"
+                       Background="White" Foreground="Black"/>
+            <Label Content="Turn:" />
+            <Ellipse x:Name="ellipseTurn" Width="30" Height="30" />
+        </ToolBar>
         <Canvas Width="750" Height="400" Background="Green" x:Name="myCanvas"
                 HorizontalAlignment="Left" VerticalAlignment="Top" ClipToBounds="True"
-                Focusable="True" />
+                Focusable="True" MouseLeftButtonDown="myCanvas_MouseLeftButtonDown">
+            <Path Stroke="White" StrokeThickness="2" Canvas.Left="33.031" Canvas.Top="137.225" HorizontalAlignment="Left" Stretch="Fill" VerticalAlignment="Center" Width="69" Height="124" x:Name="pathD">
+                <Path.Data>
+                    <PathGeometry>
+                        <PathFigure StartPoint="100,100">
+                            <ArcSegment Point="100,250" Size="60,70" SweepDirection="Counterclockwise" IsLargeArc="False" RotationAngle="90" x:Name="arcD"/>
+                            <LineSegment Point="100,100" IsStroked="True" x:Name="lineD"/>
+                        </PathFigure>
+                    </PathGeometry>
+                </Path.Data>
+            </Path>
+        </Canvas>
     </DockPanel>
 
 </Window>

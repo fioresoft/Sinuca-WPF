@@ -9,25 +9,49 @@ using System.Numerics;
 using BouncingBalls02;
 using MyPropertyDlg3;
 using System.Threading;
+using System.Diagnostics;
+using System.Media;
+using System.Runtime.InteropServices;
 
 namespace BouncingBalls02
 {
+    public enum GameType
+    {
+        GM_RANDOM,
+        GM_SINUCA,
+    }
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window,IGame,IGameEvents
     {
         public static readonly int m_cBalls = 8;
         public static Ball[]? balls = new Ball[m_cBalls];
-        private static DispatcherTimer timer = new DispatcherTimer();
+        public static DispatcherTimer timer = new DispatcherTimer();
         static Random rnd = new Random();
         public static Hole[]? holes = new Hole[6];
+        private static GameType m_gameType;
+        private int m_turnBall = 1;     // bola da vez
+        private bool m_bColored = true; // pode encaçapar bola colorida?
+        private int m_player1 = 0;
+        private int m_player2 = 0;
+        private int m_currentPlayer = 1;
+        private static Color[] colors = new Color[8]{Colors.White, Colors.Red, Colors.Yellow,
+                Colors.Maroon,Colors.LightGreen,Colors.Blue,Colors.Pink,Colors.Black};
+        private string? m_pathSound = System.IO.Path.GetFullPath(".\\Sounds\\");
+        public static bool m_bHitting = false; // cue hit ball white
+        public static Ball? m_hit = null;    // cue hit ball white which hit colored ball
+        private static GameType m_nextGame = GameType.GM_SINUCA;
+
+        [DllImport("winmm.dll")]
+        private static extern bool PlaySound(string lpszName, int hModule, int dwFlags);
+
 
         public MainWindow()
         {
             InitializeComponent();
 
-            timer.Interval = TimeSpan.FromMilliseconds(100);
+            timer.Interval = TimeSpan.FromMilliseconds(50);
             timer.Tick += Timer_Tick;
             rnd = new Random();
             Ball.canvas = myCanvas;
@@ -35,17 +59,21 @@ namespace BouncingBalls02
             Ball.label = myLabel;
             Ball.toolBar = myToolBar;
             Ball.m_bt8 = ball8;
+            Ball.gameEvents = this;
+            Hole.gameEvents = this;
+            
         }
         private void myWindow_Loaded(object sender, RoutedEventArgs e)
         {
             LoadSettings();
-            InitBallsRandom(m_cBalls);
-            InitHoles();
+            //InitBallsRandom(m_cBalls);
+            m_currentPlayer = 2;
+            OnChangePlayer();
+            Init(GameType.GM_SINUCA);
             timer.Start();
             myCanvas.KeyDown += Canvas_KeyDown;
             FocusManager.GetFocusedElement(this);
             FocusManager.GetFocusedElement(myCanvas);
-
         }
 
         private void LoadSettings()
@@ -59,15 +87,16 @@ namespace BouncingBalls02
         }
         private void InitBallsRandom(int count)
         {
-            if(balls != null)
+            m_gameType = GameType.GM_RANDOM;
+            if (balls != null)
             {
-                foreach(Ball b in balls)
+                foreach (Ball b in balls)
                 {
-                    if(b != null && b.sprite != null)
+                    if (b != null && b.sprite != null)
                         myCanvas.Children.Remove(b.sprite);
                 }
             }
-            if(balls == null)
+            if (balls == null)
             {
                 balls = new Ball[count];
             }
@@ -76,6 +105,95 @@ namespace BouncingBalls02
                 balls[i] = new Ball((i + 1) * rnd.Next(100), (i + 1) * rnd.Next(100),
                     (float)rnd.Next(200), (float)rnd.Next(200), i);
             }
+        }
+        private void InitBallsSinuca()
+        {
+            m_gameType = GameType.GM_SINUCA;
+
+            if (balls == null)
+            {
+                balls = new Ball[8];
+            }
+
+            if (balls != null)
+            {
+                foreach (Ball b in balls)
+                {
+                    if (b != null && b.sprite != null)
+                        myCanvas.Children.Remove(b.sprite);
+                }
+            }
+            
+            for (int i = 0; i < 8; i++)
+            {
+                balls[i] = new Ball(colors[i], i);
+                switch (i)
+                {
+                    // TODO ***********REMOVE MAGIC NUMBERS**********
+                    case 0:
+                        balls[i].m_p = GetBall0Pt();
+                        balls[i].is_placing = true;
+                        break;
+                    case 1: // red
+                        balls[i].m_p = GetBall1Pt();
+                        break;
+                    case 2: // yellow
+                        balls[i].m_p = GetBall2Pt();
+                        break;
+                    case 3: // maroon
+                        balls[i].m_p = GetBall3Pt();
+                        break;
+                    case 4: // green
+                        balls[i].m_p = GetBall4Pt();
+                        break;
+                    case 5: // blue
+                        balls[i].m_p = GetBall5Pt();
+                        break;
+                    case 6: // pink
+                        balls[i].m_p = GetBall6Pt();
+                        break;
+                    case 7: // black
+                        balls[i].m_p = GetBall7Pt();
+                        break;
+
+                }
+            }
+        }
+        private Vector2 GetBall0Pt()
+        {
+            return new Vector2(33.031f, (float)(137.225f + pathD.Height / 2));
+        }
+        private Vector2 GetBall1Pt()
+        {
+            return new Vector2(holes[1].m_c.X + (holes[2].m_c.X - holes[1].m_c.X) / 2,
+                137.225f + 140 - 2 * Ball.m_radius);
+        }
+        private Vector2 GetBall2Pt()
+        {
+            return new Vector2((float)lineD.Point.X, 137.225f + 140 - 2 * Ball.m_radius);
+        }
+        private Vector2 GetBall3Pt()
+        {
+            return new Vector2((float)lineD.Point.X,
+                137.225f + 70 - Ball.m_radius);
+        }
+        private Vector2 GetBall4Pt()
+        {
+            return new Vector2((float)lineD.Point.X, 137.225f);
+        }
+        private Vector2 GetBall5Pt()
+        {
+            return new Vector2(holes[1].m_c.X, 137.225f + 70 - Ball.m_radius);
+        }
+        private Vector2 GetBall6Pt()
+        {
+            return new Vector2(holes[1].m_c.X + (holes[2].m_c.X - holes[1].m_c.X) / 2,
+                137.225f + 70 - Ball.m_radius);
+        }
+        private Vector2 GetBall7Pt()
+        {
+            return new Vector2(holes[1].m_c.X + (holes[2].m_c.X - holes[1].m_c.X) / 2 + 100,
+                137.225f + 70 - Ball.m_radius);
         }
         public static Color MakeRandomColor()
         {
@@ -128,13 +246,14 @@ namespace BouncingBalls02
                 {
                     if (i != j && !balls[i].m_gone && !balls[j].m_gone)
                     {
-                        if (balls[i].is_shock(balls[j]))
+                        if (balls[j].is_shock(balls[i]))
                         {
-                            balls[i].do_shock(balls[j]);
+                            balls[j].do_shock(balls[i]);
+                            //balls[j].Move(0.1f);
                         }
                     }
                 }
-                balls[i].Move(0.1f);
+                balls[i].Move(0.05f);
             }
         }
 
@@ -237,7 +356,7 @@ namespace BouncingBalls02
 
         private void ball8_Click(object sender, RoutedEventArgs e)
         {
-            InitBallsRandom(8);
+            Init(m_nextGame);
         }
 
         private void menuOptions_Click(object sender, RoutedEventArgs e)
@@ -273,8 +392,7 @@ namespace BouncingBalls02
         }
         private void Reset()
         {
-            InitHoles();
-            InitBallsRandom(8);
+            Init(m_gameType);
         }
 
         private void myWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -282,348 +400,211 @@ namespace BouncingBalls02
             Thread.CurrentThread.IsBackground = true;
             timer.Stop();
         }
-    }
-}
 
-public class Ball
-{
-    public Ellipse sprite;
-    static public Canvas canvas;
-    static public ProgressBar progress;
-    static public Label label;
-    static public ToolBar toolBar;
-    static public Button m_bt8;
-    public Vector2 m_p;                 // centre of the circle/sprite
-    public Vector2 m_v;
-    public static float m_radius = 15;
-    int i;
-    public bool m_gone = false;
-    static int CUE_LEN = 500;
-    public bool m_has_cue = false;
-    public static int m_cue_angle = 0;
-    private static Line m_cue;
-    public static int m_table_friction = 2; // %
-    public static int m_wall_friction = 5; // %
-    private float m_cue_speed = 0;
-    private DateTime m_RightMouseButtonDownTime;
-
-    // from center (m_p) to top-left of sprite
-    public Vector2 c_to_tl()
-    {
-        Vector2 p = new Vector2();
-        p.X = m_p.X - (float)sprite.Width / 2;
-        p.Y = m_p.Y - (float)sprite.Height / 2;
-        return p;
-    }
-    // from top-left of sprite to centre of sprite
-    //public Vector2 tl_to_c()
-    //{
-    //    Vector2 p = new Vector2();
-    //    p = m_p;
-    //    p.X += (float)sprite.Width / 2;
-    //    p.Y += (float)sprite.Height / 2;
-    //    return p;
-    //}
-    /// <summary>
-    // projection of p in the direction of u
-    /// </summary>
-    /// <param name="p"></param>
-    /// <param name="u"></param>
-    /// <returns></returns>
-    static Vector2 proj(Vector2 p, Vector2 u) => ((Vector2.Dot(p, u) / Vector2.Dot(u, u))) * u;
-
-    public Ball()
-    {
-
-    }
-
-    public Ball(float x, float y, float vx, float vy, int i)
-    {
-        this.m_p.X = x;
-        this.m_p.Y = y;
-        this.m_v.X = vx;
-        this.m_v.Y = vy;
-        sprite = new Ellipse();
-        sprite.Width = m_radius * 2;
-        sprite.Height = m_radius * 2;
-        sprite.MouseLeftButtonDown += Sprite_MouseDown;
-        sprite.MouseMove += Sprite_MouseMove;
-        Random r = new Random();
-        sprite.Fill = new SolidColorBrush(MainWindow.MakeRandomColor());
-        canvas.Children.Add(sprite);
-        sprite.SetValue(Canvas.LeftProperty, (double)(c_to_tl().X));
-        sprite.SetValue(Canvas.TopProperty, (double)(c_to_tl().Y));
-        this.i = i;
-    }
-
-    private void Sprite_MouseMove(object sender, MouseEventArgs e)
-    {
-           Vector2 r = new Vector2();
-            Point ptMouse;
-            ptMouse = e.GetPosition(canvas);
-        foreach (Ball ball in MainWindow.balls)
+        public void Init(GameType gameType)
         {
-            if (ball.m_has_cue)
+            InitHoles();
+            switch(gameType)
             {
-                Vector2 vector = new Vector2((float)ptMouse.X - m_p.X, (float)ptMouse.Y - m_p.Y);
-                vector *= 5;
-                if (e.RightButton == MouseButtonState.Pressed)
-                {
-                    progress.Value = vector.Length();
-                    //m_cue_speed = vector.Length();
-                    if(Mouse.Captured == null)
-                    {
-                        Mouse.Capture(ball.sprite);
-                    }
-                    label.Content = progress.Value;
+                case GameType.GM_RANDOM:
+                    InitBallsRandom(8);
                     break;
-                }
-                if (e.RightButton == MouseButtonState.Released)
-                {
-                    progress.Value = 0;
-                    m_cue_speed = vector.Length();
-                    if (Mouse.Captured == ball.sprite)
-                        Mouse.Capture(null);
-                    else
-                        break;
-                    Vector2 cue = new Vector2();
-                    cue.X = (float)(m_cue.X2 - m_cue.X1);
-                    cue.Y = (float)(m_cue.Y2 - m_cue.Y1);
-                    cue /= cue.Length();
-                    cue *= m_cue_speed;
-                    ball.m_v = cue;
-                    ball.m_has_cue = false;
-                    canvas.Children.Remove(m_cue);
-                    Ball.m_cue_angle = 0;
-                    label.Content = 0;
+                case GameType.GM_SINUCA:
+                    InitBallsSinuca();
+                    ellipseTurn.Fill = new SolidColorBrush(colors[1]);
+                    tbPlayer1.Text = "0";
+                    tbPlayer2.Text = "0";
+                    tbPlayer1.Background = new SolidColorBrush(Colors.Crimson);
                     break;
-                }
             }
         }
-    }
 
-    private void Sprite_MouseDown(object sender, MouseButtonEventArgs e)
-    {
-        if(sender is Ellipse)
+        public void OnBallInHole(Ball ball)
         {
-            for(int i =0; i < MainWindow.balls.Length; i++)
+            PlaySound(m_pathSound + "pocket.wav",
+                0, 1);
+            ball.m_bInHole = true;
+            if (m_gameType == GameType.GM_RANDOM)
+                return;
+            //Debug.Assert(m_hit?.m_i == i);
+            
+            // TODO uncomment hack
+            //else if (!m_bHitting /*&& m_hit == null*/)
+            //{
+            //    Debug.WriteLine("\nm_bHitting era falso e m_hit==null");
+            //    return;
+            //}
+            if(ball.m_i == m_turnBall)
             {
-                if (MainWindow.balls[i].is_point_over(e.GetPosition(canvas)))
+                Debug.WriteLine($"\nturn ball: {m_turnBall}");
+                OnScore(ball.m_i);
+                m_turnBall++;
+                m_bColored = true;
+                if(m_turnBall == 8)
                 {
-                    Ball ball = MainWindow.balls[i];
-                    ball.m_has_cue = true;
-                    ball.draw_cue();
+                    OnEnd();
                 }
                 else
-                    MainWindow.balls[i].m_has_cue=false;
-            }
-        }
-    }
-
-    bool is_point_over(Point point)
-    { 
-        float d  = (float)Math.Sqrt(Math.Pow(m_p.X - point.X, 2) +  Math.Pow(m_p.Y - point.Y, 2));
-        return d <= m_radius;
-    }
-
-    public void Move(float dt)
-    {
-        bool bounced = false;
-        m_v *= (float)((100 - m_table_friction) / 100.0);
-        if (m_v.Length() < m_radius)
-            m_v *= 0;
-        m_p += m_v * dt;
-        
-        for(int hole = 0; hole < MainWindow.holes.Length; hole++)
-        {
-            if (MainWindow.holes[hole].is_in_hole(this))
-            {
-                m_gone = true;
-                canvas.Children.Remove(sprite);
-                if(canvas.Children.Count == 0)
                 {
-                    m_bt8.IsEnabled = true;
+                    ellipseTurn.Fill = new SolidColorBrush(colors[m_turnBall]);
                 }
             }
-        }
-
-        if (!m_gone)
-        {
-            if (bounced = bounce())
+            else if(ball.m_i == 0)
             {
-                m_v *= (float)((100 - m_wall_friction) / 100.0);
-                if (m_v.Length() < m_radius)
-                    m_v *= 0;
+                Debug.WriteLine($"\nwhite ball: {ball.m_i}");
+                OnChangePlayer();
+                OnPlaceBall(ball.m_i);
             }
-            sprite.SetValue(Canvas.LeftProperty, (double)c_to_tl().X);
-            sprite.SetValue(Canvas.TopProperty, (double)c_to_tl().Y);
+            else if (m_bColored)
+            {
+                Debug.WriteLine($"\ncolored ball: {ball.m_i}");
+                m_bColored = false;
+                OnScore(ball.m_i);
+                myCanvas.Children.Remove(ball.sprite);
+                balls[ball.m_i].m_gone = true;
+                OnPlaceBall(ball.m_i);
+            }
+            else
+            {
+                Debug.WriteLine($"\nother ball: {ball.m_i}");
+                OnScore(-ball.m_i);
+                OnChangePlayer();
+                OnPlaceBall(ball.m_i);
+            }
+            m_hit = null;
+            m_bHitting = false;
+            Debug.WriteLine("m_bHitting set to false at OnBallInHole");
+
         }
-        DockPanel wnd = canvas.Parent as DockPanel;
-        MainWindow mainWindow = wnd.Parent as MainWindow;
-        if (!MainWindow.balls_stopped())
-        { 
-            mainWindow.Title = "Moving...";
-        }
-        else
+
+        public void OnBallOutHole(int i)
         {
-            mainWindow.Title = "Stopped.";
+            if (m_bHitting)
+            {
+                OnChangePlayer();
+                m_bHitting = false;
+                m_hit = null;
+                Debug.WriteLine("m_bHitting set to false at OnBallOutHole");
+            }
         }
-        
-    }
-    bool bounce()
-    {
-        bool bounced = false;
-
-        if (m_p.X <= m_radius)
+        public void OnEnd()
         {
-            m_p.X = m_radius;
-            m_v.X *= -1;
-            bounced = true;
+            int winner = this.m_player1 > this.m_player2 ? 1 : 2;
+            MessageBox.Show("player " + winner + " wins");
         }
-        else if (m_p.X >= canvas.Width - m_radius)
+        public void OnScore(int i)
         {
-            m_p.X = (float)(canvas.Width - m_radius);
-            m_v.X *= -1;
-            bounced = true;
+            if(m_currentPlayer == 1)
+            {
+                this.m_player1 += i;
+                tbPlayer1.Text = this.m_player1.ToString();
+            }
+            else
+            {
+                this.m_player2 += i;
+                tbPlayer2.Text = this.m_player2.ToString();
+            }
         }
-        if (m_p.Y <= m_radius)
+        public void OnChangePlayer()
         {
-            m_p.Y = m_radius;
-            m_v.Y *= -1;
-            bounced = true;
+            m_currentPlayer = m_currentPlayer == 1? 2: 1;
+            tbStatus.Text = "player " + m_currentPlayer + " turn." +
+                "ball " + m_turnBall;
+            if (m_bColored)
+            {
+                tbStatus.Text += " or colored";
+            }
+            if (m_currentPlayer == 1)
+            {
+                tbPlayer1.Background = new SolidColorBrush(Colors.Crimson);
+                tbPlayer2.Background = new SolidColorBrush(Colors.White);
+            }
+            else
+            {
+                tbPlayer1.Background= new SolidColorBrush(Colors.Black);
+                tbPlayer2.Background = new SolidColorBrush(Colors.Crimson);
+            }
+            Debug.WriteLine("\nOnChangePlayer");
+            Debug.WriteLine(m_pathSound);  
+            PlaySound(m_pathSound + "hit.wav",
+                0, 1);
         }
-        if (m_p.Y >= canvas.Height - m_radius)
+        public void OnPlaceBall(int i)
         {
-            m_p.Y = (float)(canvas.Height - m_radius);
-            m_v.Y *= -1;
-            bounced = true;
+            balls[i].m_gone = false;
+            balls[i].m_p = new Vector2(100, 100);
+            balls[i].m_v *= 0;
+            balls[i].is_placing = true;
+            myCanvas.Children.Add(balls[i].sprite);
+            Mouse.Capture(balls[i].sprite);
+            tbStatus.Text = "player " + this.m_currentPlayer + " place ball " + i;
+            m_hit = null;
+            m_bHitting = false;
+            balls[i].m_bInHole = false;
         }
-        return bounced;
-    }
-    public bool is_shock(Ball other)
-    {
-        double SumOfRadiiSquared = (m_radius + Ball.m_radius) * (m_radius + Ball.m_radius);
-        double d_squared = (Math.Pow((m_p.X - other.m_p.X), 2) + Math.Pow((m_p.Y - other.m_p.Y), 2));
-        if (d_squared < SumOfRadiiSquared)
+        public void OnFault(int i)
         {
-            this.sprite.Fill = new SolidColorBrush(MainWindow.MakeRandomColor());
-            other.sprite.Fill = new SolidColorBrush(MainWindow.MakeRandomColor());
-            Console.WriteLine($"SHOCK: {i}-{other.i}");
-            return true;
+            OnChangePlayer();
+            OnPlaceBall(i);
+        }
+        public void OnBallHitByCue(int i)
+        {
+            PlaySound(m_pathSound + "cue_shoot.wav",
+                0, 1);
+            //if (i == 0)
+            //{
+            //    m_bHitting = true;
+            //}
+            m_bHitting =true;
+            Debug.WriteLine("m_bHitting set to true");
+        }
+        public void OnBallHit(Ball i, Ball j)
+        {
+            PlaySound(m_pathSound + "low_ball.wav",
+                0, 1);
+            if (m_bHitting)
+            {
+                m_hit = i.m_i == 0 ? j : i;
+            }
+        }
+        public void OnBallsMoving()
+        {
+            Title = "moving...";
+        }
+        public void OnBallsStopped()
+        {
+            //m_hit = null;
+            //m_bHitting = false;
+            Title = "Stopped.";
         }
 
-        return false;
-
-    }
-    /*
-     * Vector r = b2.m_p - m_p;
-	Vector v1r,v1n;
-	Vector v2r,v2n;
-	Vector tmp;
-
-	v1r = m_v.proj(r);
-	v1n = m_v - v1r;
-	v2r = b2.m_v.proj(r);
-	v2n = b2.m_v - v2r;
-	tmp = v1r;
-	v1r = v2r;
-	v2r = tmp;
-
-	if (!b2.m_ghost) {
-		m_v = (v1r + v1n);// *m_ball_elasticity;
-		b2.m_v = (v2r + v2n);// *m_ball_elasticity;
-
-		//////
-		if (r.modulo() < m_r + b2.m_r) {
-			Move(350);
-		}
-		//////
-	}
-    */
-    public void do_shock(Ball other)
-    {
-        Vector2 r = other.m_p - m_p;
-        Vector2 v1r, v1n;
-        Vector2 v2r, v2n;
-        Vector2 tmp;
-
-        v1r = proj(m_v, r);
-        v1n = m_v - v1r;
-        v2r = proj(other.m_v, r);
-        v2n = other.m_v - v2r;
-        tmp = v1r;
-        v1r = v2r;
-        v2r = tmp;
-
-        m_v = (v1r + v1n);
-        other.m_v = (v2r + v2n);
-
-    }
-
-    public bool is_overlapping(Ball other)
-    {
-        double SumOfRadiiSquared = (m_radius + Ball.m_radius) * (m_radius + Ball.m_radius);
-        double d_squared = (Math.Pow((m_p.X - other.m_p.X), 2) + Math.Pow((m_p.Y - other.m_p.Y), 2));
-        if (d_squared < SumOfRadiiSquared)
+        private void myCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            Console.WriteLine($"OVERLAPPING: {i}-{other.i}");
-            return true;
+            foreach (Ball ball in balls)
+            {
+                //if (ball.is_placing)
+                //{
+                //    ball.is_placing = false;
+                //    Mouse.Capture(null);
+                //}
+            }
         }
-        return false;
-    }
 
-    public void draw_cue()
-    {
-        Point p1 = new Point();
-        Point p2 = new Point();
-
-        double angle_rad = (m_cue_angle * Math.PI) / 180;
-        p1.X = m_p.X + m_radius * Math.Cos(angle_rad);
-        p1.Y = m_p.Y - m_radius * Math.Sin(angle_rad);
-        p2.X = m_p.X + (m_radius + CUE_LEN) * Math.Cos(angle_rad);
-        p2.Y = m_p.Y - (m_radius + CUE_LEN) * Math.Sin(angle_rad);
-
-        Line line = new Line
+        private void menuSinuca_Click(object sender, RoutedEventArgs e)
         {
-            X1 = p1.X,
-            Y1 = p1.Y,
-            X2 = p2.X,
-            Y2 = p2.Y,
-            Stroke = Brushes.Black,
-        };
-        if(m_cue != null)
-            canvas.Children.Remove(m_cue);
-        m_cue = line;
-        canvas.Children.Add(line);
-    }
-}
-
-public class Hole
-{
-    public Ellipse sprite;
-    public Vector2 m_c;
-    public static float m_r = 50;
-    int hole;
-    public Hole(Ellipse sprite,int hole)
-    {
-        this.sprite = sprite;
-        this.hole = hole;
-    }
-    public bool is_in_hole(Ball ball)
-    {
-        /*
-         *  Vector r = b.m_p - m_c;
-	        LONG d = (LONG)r.modulo();
-	        return d < m_r - b.m_r;
-        */
-    Vector2 r = ball.m_p - m_c;
-        float d = r.Length();
-        bool debug = d < m_r - Ball.m_radius;
-        if (debug)
-        {
-            debug = true;
+            menuSinuca.IsChecked = true;
+            menuRandom.IsChecked = false;
+            m_nextGame = GameType.GM_SINUCA;
         }
-        return debug;
+
+        private void menuRandom_Click(object sender, RoutedEventArgs e)
+        {
+            menuSinuca.IsChecked = false;
+            menuRandom.IsChecked = true;
+            m_nextGame = GameType.GM_RANDOM;
+        }
     }
 }
+
+
 

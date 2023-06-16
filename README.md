@@ -1,3 +1,5 @@
 # Sinuca01 C#
-Pool game without game logic.  
-Beta.
+Brazilian Snooker ( Sinuca )  
+Bugfull. Enjoy.  
+Beta.  
+For Windows.
