@@ -7,7 +7,7 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>sinuca</AssemblyName>
     <ApplicationIcon>16.ico</ApplicationIcon>
-    <SignAssembly>True</SignAssembly>
+    <SignAssembly>False</SignAssembly>
     <AssemblyOriginatorKeyFile>fioresoft.net.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
