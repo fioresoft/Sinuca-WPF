@@ -23,7 +23,7 @@ namespace BouncingBalls02
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window,IGame,IGameEvents
+    public partial class MainWindow : Window, IGame, IGameEvents
     {
         public static readonly int m_cBalls = 8;
         public static Ball[]? balls = new Ball[m_cBalls];
@@ -32,7 +32,23 @@ namespace BouncingBalls02
         public static Hole[]? holes = new Hole[6];
         private static GameType m_gameType;
         private int m_turnBall = 1;     // bola da vez
-        private bool m_bColored = true; // pode encaçapar bola colorida?
+        private bool colored;
+        private bool m_bColored
+        {
+            get 
+            {
+                return colored;
+            }
+            set
+            {
+                if (value)
+                    ellipseColor.Visibility = Visibility.Visible;
+                else
+                    ellipseColor.Visibility = Visibility.Collapsed;
+                colored = value;
+            }
+        }
+
         private int m_player1 = 0;
         private int m_player2 = 0;
         private int m_currentPlayer = 1;

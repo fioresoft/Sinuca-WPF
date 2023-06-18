@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="About" Height="209" Width="313"
         Opacity="0.5" Background="Black">
-    <Grid Margin="10,0,0,0" Opacity="0.5">
+    <Grid Margin="10,0,0,0">
         <StackPanel Orientation="Vertical"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
             <TextBlock HorizontalAlignment="Center" Foreground="White" Background="Black">Sinuca01</TextBlock>
