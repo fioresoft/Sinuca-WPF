@@ -24,7 +24,7 @@ namespace BouncingBalls02
         public bool m_gone = false;
         static int CUE_LEN = 500;
         public bool m_has_cue = false;
-        public static int m_cue_angle = 0;
+        public static float m_cue_angle = 0;
         private static Line m_cue;
         public static int m_table_friction = 2; // %
         public static int m_wall_friction = 5; // %
@@ -33,6 +33,7 @@ namespace BouncingBalls02
         public bool is_placing { get; set; } = false;
         public static IGameEvents gameEvents = null;
         public bool m_bInHole = false;
+        public static float m_dt = 0.05f;
 
 
         // from center (m_p) to top-left of sprite

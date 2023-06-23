@@ -67,7 +67,7 @@ namespace BouncingBalls02
         {
             InitializeComponent();
 
-            timer.Interval = TimeSpan.FromMilliseconds(50);
+            timer.Interval = TimeSpan.FromSeconds(Ball.m_dt);
             timer.Tick += Timer_Tick;
             rnd = new Random();
             Ball.canvas = myCanvas;
@@ -264,12 +264,17 @@ namespace BouncingBalls02
                     {
                         if (balls[j].is_shock(balls[i]))
                         {
+                            while (balls[j].is_overlapping(balls[i]))
+                            {
+                                balls[j].m_p -= balls[j].m_v * Ball.m_dt;
+                                balls[i].m_p -= balls[i].m_v * Ball.m_dt;
+                            }
                             balls[j].do_shock(balls[i]);
                             //balls[j].Move(0.1f);
                         }
                     }
                 }
-                balls[i].Move(0.05f);
+                balls[i].Move(Ball.m_dt);
             }
         }
 
@@ -303,7 +308,7 @@ namespace BouncingBalls02
             {
                 if (balls[i].m_has_cue)
                 {
-                    Ball.m_cue_angle += 1;
+                    Ball.m_cue_angle += 0.5f;
                     balls[i].draw_cue();
                 }
             }
@@ -315,7 +320,7 @@ namespace BouncingBalls02
             {
                 if (balls[i].m_has_cue)
                 {
-                    Ball.m_cue_angle -= 1;
+                    Ball.m_cue_angle -= 0.5f;
                     balls[i].draw_cue();
                 }
             }
@@ -349,7 +354,7 @@ namespace BouncingBalls02
                     {
                         if (MainWindow.balls[i].m_has_cue)
                         {
-                            Ball.m_cue_angle += 1;
+                            Ball.m_cue_angle += 0.5f;
                             MainWindow.balls[i].draw_cue();
                         }
                     }
@@ -359,7 +364,7 @@ namespace BouncingBalls02
                     {
                         if (MainWindow.balls[i].m_has_cue)
                         {
-                            Ball.m_cue_angle -= 1;
+                            Ball.m_cue_angle -= 0.5f;
                             MainWindow.balls[i].draw_cue();
                         }
                     }
